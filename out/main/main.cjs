@@ -981,7 +981,21 @@ const getStockMovements = (variantId) => {
   );
 };
 const Store = ElectronStoreImport.default;
+const registerAppProtocol = () => {
+  electron.protocol.registerSchemesAsPrivileged([
+    {
+      scheme: "app",
+      privileges: {
+        secure: true,
+        standard: true,
+        supportFetchAPI: true,
+        corsEnabled: true
+      }
+    }
+  ]);
+};
 let mainWindow = null;
+registerAppProtocol();
 electron.app.setPath("userData", node_path.join(electron.app.getPath("appData"), "StockFlow"));
 electron.app.disableHardwareAcceleration();
 electron.app.commandLine.appendSwitch("disable-gpu");
@@ -1063,9 +1077,7 @@ const loadRenderer = async (window) => {
     );
   });
   if (!process.env.ELECTRON_RENDERER_URL) {
-    const indexPath = node_path.join(electron.app.getAppPath(), "out/renderer/index.html");
-    console.log("[renderer] Loading file:", indexPath);
-    await window.loadFile(indexPath);
+    await window.loadURL("app://renderer/index.html");
     return;
   }
   let retryCount = 0;
@@ -1369,6 +1381,11 @@ const registerIpcHandlers = () => {
   });
 };
 electron.app.whenReady().then(async () => {
+  electron.protocol.handle("app", (request) => {
+    const url = request.url.replace("app://renderer/", "");
+    const rendererPath = node_path.join(electron.app.getAppPath(), "out/renderer", url);
+    return electron.net.fetch("file://" + rendererPath);
+  });
   initDatabase();
   registerIpcHandlers();
   await createWindow();

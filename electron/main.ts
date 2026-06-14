@@ -4,6 +4,8 @@ import {
   dialog,
   ipcMain,
   nativeImage,
+  protocol,
+  net,
   screen,
   shell,
 } from "electron";
@@ -66,10 +68,28 @@ import {
   updateUserSettings,
 } from "./db/database";
 
+const registerAppProtocol = (): void => {
+  // Register a custom app:// protocol so type="module" scripts work from file system
+  protocol.registerSchemesAsPrivileged([
+    {
+      scheme: "app",
+      privileges: {
+        secure: true,
+        standard: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+      },
+    },
+  ]);
+};
+
 let mainWindow: BrowserWindow | null = null;
 
 // ✅ FIX 1: Set userData path BEFORE app is ready, using app.getPath('appData')
 // process.cwd() breaks in packaged/installed apps
+// Register custom protocol BEFORE app is ready
+registerAppProtocol();
+
 app.setPath("userData", join(app.getPath("appData"), "StockFlow"));
 
 // ✅ FIX 2: Full GPU disable flags (must be set before app is ready)
@@ -165,7 +185,6 @@ const attachWindowStateHandlers = (window: BrowserWindow): void => {
 };
 
 const loadRenderer = async (window: BrowserWindow): Promise<void> => {
-  // ✅ FIX 3: Attach error listeners before loading so nothing is missed
   window.webContents.on(
     "did-fail-load",
     (_event, errorCode, errorDescription, url) => {
@@ -184,10 +203,8 @@ const loadRenderer = async (window: BrowserWindow): Promise<void> => {
   });
 
   if (!process.env.ELECTRON_RENDERER_URL) {
-    // ✅ FIX 4: Use __dirname-relative path (reliable in packaged builds)
-    const indexPath = join(__dirname, "../renderer/index.html");
-    console.log("[renderer] Loading file:", indexPath);
-    await window.loadFile(indexPath);
+    // Use custom app:// protocol so ES module scripts load correctly in packaged build
+    await window.loadURL("app://renderer/index.html");
     return;
   }
 
@@ -536,6 +553,13 @@ const registerIpcHandlers = (): void => {
 };
 
 app.whenReady().then(async () => {
+  // Handle app:// protocol — serves renderer files from the asar
+  protocol.handle("app", (request) => {
+    const url = request.url.replace("app://renderer/", "");
+    const rendererPath = join(app.getAppPath(), "out/renderer", url);
+    return net.fetch("file://" + rendererPath);
+  });
+
   initDatabase();
   registerIpcHandlers();
   await createWindow();

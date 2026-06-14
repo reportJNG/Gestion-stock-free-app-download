@@ -7,8 +7,29 @@ directories:
   buildResources: build
 
 files:
-  - out/**
+  - out/main/**
+  - out/preload/**
+  - out/renderer/**
   - package.json
+  - node_modules/**
+  - "!node_modules/vite/**"
+  - "!node_modules/electron-vite/**"
+  - "!node_modules/@vitejs/**"
+  - "!node_modules/@tailwindcss/**"
+  - "!node_modules/tailwindcss/**"
+  - "!node_modules/typescript/**"
+  - "!node_modules/electron-builder/**"
+  - "!node_modules/@esbuild/**"
+  - "!node_modules/@rollup/**"
+  - "!node_modules/rollup/**"
+  - "!node_modules/esbuild/**"
+  - "!node_modules/@types/**"
+  - "!node_modules/.cache/**"
+  - "!src/**"
+  - "!electron/**"
+  - "!public/**"
+  - "!scripts/**"
+  - "!*.config.*"
 
 extraResources:
   - from: public/icon.png
@@ -16,7 +37,6 @@ extraResources:
 
 asar: true
 
-# Auto-update is intentionally disabled until a publish provider is configured.
 publish: null
 
 win:
