@@ -1063,7 +1063,7 @@ const loadRenderer = async (window) => {
     );
   });
   if (!process.env.ELECTRON_RENDERER_URL) {
-    const indexPath = node_path.join(__dirname, "../renderer/index.html");
+    const indexPath = node_path.join(electron.app.getAppPath(), "out/renderer/index.html");
     console.log("[renderer] Loading file:", indexPath);
     await window.loadFile(indexPath);
     return;
